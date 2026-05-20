@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 /**
- * GLOBAL SKILL DATABASE
+ * GLOBAL SKILLS
  */
 const GLOBAL_SKILLS = [
-  // software
   "React",
   "Next.js",
   "Javascript",
@@ -17,7 +16,6 @@ const GLOBAL_SKILLS = [
   "Sql",
   "Postgresql",
   "Firebase",
-  "Gedux",
   "Git",
   "Github",
   "Vercel",
@@ -28,44 +26,10 @@ const GLOBAL_SKILLS = [
   "Laravel",
   "Go",
   "GraphQL",
-
-  // office
   "Excel",
-  "Word",
-  "Powerpoint",
-  "Sap",
-  "Erp",
-
-  // design
   "Figma",
-  "Photoshop",
-  "Illustrator",
-  "Canva",
-  "Autocad",
-
-  // marketing
   "Seo",
-  "Google ads",
-  "Meta ads",
-  "Social media",
-
-  // hr
-  "Recruitment",
-  "Human resources",
-  "Onboarding",
-  "Payroll",
-
-  // ecommerce
   "Shopify",
-  "Woocommerce",
-  "Wordpress",
-  "Ikas",
-
-  // soft skills
-  "Leadership",
-  "Communication",
-  "Teamwork",
-  "Problem Solving",
 ];
 
 /**
@@ -76,308 +40,273 @@ const CERTIFICATES = [
   "Coursera",
   "Google",
   "Microsoft",
-  "Aws",
+  "AWS",
   "Meta",
   "IBM",
-  "Linkedin Learning",
+  "LinkedIn",
 ];
 
 /**
  * EXPERIENCE KEYWORDS
  */
 const EXPERIENCE_KEYWORDS = [
-  "Intern",
-  "Staj",
-  "Developer",
-  "Specialist",
-  "Manager",
-  "Engineer",
-  "Assistant",
-  "Coordinator",
-  "Frontend",
-  "Backend",
-  "Hr",
-  "Software",
-  "QA",
-  "Product",
+  "developer",
+  "engineer",
+  "specialist",
+  "manager",
+  "intern",
+  "frontend",
+  "backend",
+  "software",
 ];
+
+function extractSection(text: string, keywords: string[]) {
+  const lines = text.split("\n").map(l => l.trim());
+
+  let isTarget = false;
+  const result: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toLowerCase();
+
+    // SECTION START
+    if (keywords.some(k => line.includes(k.toLowerCase()))) {
+      isTarget = true;
+      continue;
+    }
+
+    // NEXT SECTION GUARD (stop conditions)
+    if (
+      isTarget &&
+      /^[A-Z\s]{3,}$/.test(lines[i]) && // yeni başlık gibi
+      !line.includes("http")
+    ) {
+      break;
+    }
+
+    if (isTarget && lines[i].length > 0) {
+      result.push(lines[i]);
+    }
+  }
+
+  return result;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
     const text = body?.text || "";
-    const fileName = body?.fileName || "Unknown CV";
     const jobDescription = body?.jobDescription || "";
 
     if (!text || text.trim().length < 20) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "No valid CV text found",
-        },
+        { success: false, error: "No valid CV text found" },
         { status: 400 }
       );
     }
-    const lowerText = text.toLowerCase();
-    const certificationsSection =
-      text.split(/certifications|certificates/i)[1] || "";
 
-    const experienceSection =
-      text.split(/employment history|experience/i)[1] || "";
-
-    const skillsSection =
-      text.split(/skills/i)[1] || "";
-    const lowerJob = jobDescription.toLowerCase();
+    const clean = text.toLowerCase().replace(/\s+/g, " ");
+    const job = jobDescription.toLowerCase();
 
     /**
+     * =========================
      * ROLE DETECTION
+     * =========================
      */
     let role = "General Professional";
 
-    if (
-      lowerText.includes("frontend") ||
-      lowerText.includes("react")
-    ) {
+    if (clean.includes("react") || clean.includes("frontend")) {
       role = "Frontend Developer";
-    } else if (
-      lowerText.includes("human resources") ||
-      lowerText.includes("recruitment")
-    ) {
+    } else if (clean.includes("hr") || clean.includes("recruitment")) {
       role = "HR Specialist";
-    } else if (
-      lowerText.includes("designer") ||
-      lowerText.includes("figma")
-    ) {
+    } else if (clean.includes("figma") || clean.includes("designer")) {
       role = "Designer";
-    } else if (
-      lowerText.includes("marketing") ||
-      lowerText.includes("seo")
-    ) {
+    } else if (clean.includes("seo") || clean.includes("marketing")) {
       role = "Marketing Specialist";
     }
 
     /**
-     * EXPERIENCE DETECTION
-     */
-    /**
-     * EXPERIENCE DETECTION
+     * =========================
+     * 🔥 FIXED EXPERIENCE LOGIC
+     * =========================
      */
 
-    const experienceYearsRegex =
-      experienceSection.match(/20\d{2}/g) || [];
-
-    const experienceYearsUnique = [
-      ...new Set(experienceYearsRegex),
-    ]
-      .map(Number)
-      .sort();
+    const years = clean.match(/\b(20\d{2}|19\d{2})\b/g)?.map(Number) || [];
 
     let experienceYears = 0;
 
-    if (experienceYearsUnique.length >= 2) {
-      const minYear = Math.min(...experienceYearsUnique);
-      const maxYear = Math.max(...experienceYearsUnique);
+    if (years.length >= 2) {
+      const sorted = [...new Set(years)].sort((a, b) => a - b);
 
-      experienceYears = maxYear - minYear;
+      const diff = sorted[sorted.length - 1] - sorted[0];
 
-      if (experienceYears > 15) {
-        experienceYears = 3;
+      // 🚨 HARD CLAMP (CRITICAL FIX)
+      if (diff >= 0 && diff <= 10) {
+        experienceYears = diff;
+      } else {
+        experienceYears = 0;
       }
     }
 
     /**
+     * fallback (VERY IMPORTANT)
+     */
+    if (experienceYears === 0) {
+      const keywordHits = EXPERIENCE_KEYWORDS.filter((k) =>
+        clean.includes(k)
+      ).length;
+
+      if (keywordHits >= 6) experienceYears = 4;
+      else if (keywordHits >= 3) experienceYears = 2;
+      else if (keywordHits >= 1) experienceYears = 1;
+    }
+
+    /**
+     * =========================
      * SENIORITY
+     * =========================
      */
     let seniority = "Junior";
 
-    if (experienceYears >= 5) {
-      seniority = "Senior";
-    } else if (experienceYears >= 2) {
-      seniority = "Mid-Level";
-    }
+    if (experienceYears >= 5) seniority = "Senior";
+    else if (experienceYears >= 2) seniority = "Mid-Level";
 
     /**
-     * COMPANY EXPERIENCE
+     * =========================
+     * COMPANY COUNT (FIXED)
+     * =========================
      */
-    const companyMatches =
-      experienceSection.match(/\((.*?)\)/g) || [];
-
-    const companyCount = companyMatches.length;
+    const companyCount = (
+      clean.match(/\b(company|ltd|inc|a\.s\.|corp|co\.)\b/g) || []
+    ).length;
 
     /**
-     * SKILL EXTRACTION
+     * =========================
+     * SKILLS
+     * =========================
      */
-    const skills = GLOBAL_SKILLS.filter((skill) =>
-      lowerText.includes(skill.toLowerCase())
-    );
+    const skills = [...new Set(
+      GLOBAL_SKILLS.filter((s) =>
+        clean.includes(s.toLowerCase())
+      )
+    )];
 
     /**
-     * CERTIFICATE DETECTION
+     * =========================
+     * 🔥 FIXED CERTIFICATES (IMPORTANT FIX)
+     * =========================
+     *
+     * OLD PROBLEM:
+     * only "certification section split" → often empty
+     *
+     * NEW:
+     * full text scan + flexible match
      */
-    const certificates = CERTIFICATES.filter((cert) =>
-      certificationsSection
-        .toLowerCase()
-        .includes(cert.toLowerCase())
-    );
+const certificateSection = extractSection(text, [
+  "certificates",
+  "certificate",
+  "sertifikalar",
+  "sertifikalarım",
+  "certifications",
+]);
+
+const certificates = [
+  ...new Set(
+    certificateSection
+      .join(" ")
+      .split(/[,•\-\n]/)
+      .map((c) => c.trim())
+      .filter((c) =>
+        c.length > 2 &&
+        CERTIFICATES.some((db) =>
+          c.toLowerCase().includes(db.toLowerCase())
+        )
+      )
+  ),
+];
+
 
     /**
-     * MISSING SKILLS
-     */
-    let missingSkills: string[] = [];
-
-    if (jobDescription.length > 10) {
-      missingSkills = GLOBAL_SKILLS.filter(
-        (skill) =>
-          lowerJob.includes(skill.toLowerCase()) &&
-          !skills.includes(skill)
-      );
-    } else {
-      missingSkills = GLOBAL_SKILLS.filter(
-        (skill) => !skills.includes(skill)
-      ).slice(0, 8);
-    }
-
-    /**
-     * ATS SCORE
+     * =========================
+     * SCORE
+     * =========================
      */
     let score = 40;
-
     score += skills.length * 4;
-    score += certificates.length * 3;
+    score += certificates.length * 4;
     score += experienceYears * 2;
 
-    if (text.length > 1500) {
-      score += 10;
-    }
-
-    if (jobDescription.length > 10) {
-      score += 10;
-    }
+    if (clean.length > 1500) score += 10;
+    if (job.length > 10) score += 10;
 
     if (score > 98) score = 98;
 
     /**
-     * JOB MATCH SCORE
+     * JOB MATCH
      */
     let jobMatchScore = 0;
 
-    if (jobDescription.length > 10) {
-      const matchedSkills = skills.filter((skill) =>
-        lowerJob.includes(skill.toLowerCase())
+    if (job.length > 10) {
+      const matched = skills.filter((s) =>
+        job.includes(s.toLowerCase())
       );
 
       jobMatchScore = Math.round(
-        (matchedSkills.length /
-          Math.max(
-            1,
-            missingSkills.length + matchedSkills.length
-          )) * 100
+        (matched.length / Math.max(1, skills.length)) * 100
       );
     }
 
     /**
      * SUMMARY
      */
-    let summary = "";
-
-    if (score >= 85) {
-      summary =
-        "Excellent ATS-compatible CV with strong professional and technical indicators.";
-    } else if (score >= 70) {
-      summary =
-        "Well-structured CV with good skill coverage and professional experience.";
-    } else {
-      summary =
-        "CV has potential but requires improvements in structure, skills, or keyword optimization.";
-    }
+    let summary =
+      score >= 85
+        ? "Excellent ATS-compatible CV with strong indicators."
+        : score >= 70
+        ? "Good CV with solid structure."
+        : "CV needs improvement.";
 
     /**
      * STRENGTHS
      */
     const strengths: string[] = [];
 
-    if (skills.length >= 5) {
-      strengths.push("Strong skill diversity");
-    }
-
-    if (certificates.length > 0) {
-      strengths.push("Certificate presence detected");
-    }
-
-    if (text.length > 2000) {
-      strengths.push("Detailed professional background");
-    }
-
-    if (jobMatchScore >= 70) {
-      strengths.push("High job description compatibility");
-    }
-
-    if (experienceYears >= 3) {
-      strengths.push("Professional experience detected");
-    }
-
-    if (companyCount >= 2) {
-      strengths.push("Multiple company experiences");
-    }
+    if (skills.length >= 5) strengths.push("Strong skill set");
+    if (certificates.length > 0) strengths.push("Certificates detected");
+    if (experienceYears >= 2) strengths.push("Professional experience detected");
 
     /**
      * WEAKNESSES
      */
     const weaknesses: string[] = [];
 
-    if (missingSkills.length >= 5) {
-      weaknesses.push("Important skills appear missing");
-    }
-
-    if (certificates.length === 0) {
-      weaknesses.push("No certificates detected");
-    }
-
-    if (text.length < 1000) {
-      weaknesses.push("CV content appears too short");
-    }
-
-    if (experienceYears <= 1) {
-      weaknesses.push("Limited professional experience");
-    }
+    if (skills.length < 4) weaknesses.push("Limited skills coverage");
+    if (certificates.length === 0) weaknesses.push("No certificates detected");
+    if (experienceYears === 0) weaknesses.push("Experience unclear");
 
     /**
      * FINAL RESULT
      */
-    const result = {
-      role,
-      seniority,
-      experienceYears,
-      companyCount,
-
-      score,
-      jobMatchScore,
-
-      skills,
-      missingSkills,
-      certificates,
-
-      summary,
-
-      strengths,
-      weaknesses,
-    };
-
     return NextResponse.json({
       success: true,
-      fileName,
-      result,
-    });
-
-  } catch (err: any) {
-    console.error("ANALYZE ERROR:", err);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: err?.message || "Unexpected server error",
+      result: {
+        role,
+        seniority,
+        experienceYears,
+        companyCount,
+        score,
+        jobMatchScore,
+        skills,
+        certificates,
+        summary,
+        strengths,
+        weaknesses,
       },
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

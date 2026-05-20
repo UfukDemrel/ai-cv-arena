@@ -12,7 +12,10 @@ export default function UploadBox() {
   const [error, setError] = useState("");
   const [text, setText] = useState("");
 
-  // ✅ SAFE dynamic PDF parser
+  /**
+   * SAFE PDF PARSER (FIXED)
+   * prevents DOMMatrix / SSR crashes
+   */
   const extractPdfText = async (file: File) => {
     const mod = await import("react-pdftotext");
     const pdfToText = mod.default;
@@ -27,9 +30,9 @@ export default function UploadBox() {
       setFileName(file.name);
 
       const extractedText = await extractPdfText(file);
-      setText(extractedText);
+      setText(extractedText || "");
 
-      if (!extractedText || extractedText.length < 20) {
+      if (!extractedText || extractedText.trim().length < 20) {
         setError("Could not extract enough text from PDF.");
         return;
       }
@@ -46,20 +49,21 @@ export default function UploadBox() {
 
       const data = await res.json();
 
-      if (!data.success) {
-        setError(data.error || "Analysis failed.");
+      if (!data?.success) {
+        setError(data?.error || "Analysis failed.");
         return;
       }
 
-      setResult(data.result);
+      setResult(data?.result || null);
+
     } catch (err: any) {
-      setError(err.message || "Unexpected error");
+      setError(err?.message || "Unexpected error");
     } finally {
       setLoading(false);
     }
   };
 
-  const getScoreStyle = (score: number) => {
+  const getScoreStyle = (score: number = 0) => {
     if (score < 50) {
       return {
         text: "text-red-400",
@@ -83,7 +87,8 @@ export default function UploadBox() {
     };
   };
 
-  const style = result?.score ? getScoreStyle(result.score) : null;
+  const scoreValue = result?.score ?? 0;
+  const style = getScoreStyle(scoreValue);
 
   return (
     <div className="w-full max-w-5xl mx-auto">
@@ -150,10 +155,10 @@ export default function UploadBox() {
 
             <div className="relative z-10 flex flex-col items-center">
 
-              <div className={`w-52 h-52 rounded-full border-[12px] flex items-center justify-center bg-black/20 ${style?.border} ${style?.shadow}`}>
+              <div className={`w-52 h-52 rounded-full border-[12px] flex items-center justify-center bg-black/20 ${style.border} ${style.shadow}`}>
                 <div className="text-center">
-                  <div className={`text-6xl font-black ${style?.text}`}>
-                    {result.score}
+                  <div className={`text-6xl font-black ${style.text}`}>
+                    {scoreValue}
                   </div>
                   <div className="text-sm tracking-widest text-gray-400 mt-2">
                     ATS SCORE
@@ -162,60 +167,54 @@ export default function UploadBox() {
               </div>
 
               <p className="mt-8 text-gray-300 max-w-2xl text-center text-lg">
-                {result.summary}
+                {result?.summary || ""}
               </p>
             </div>
           </div>
 
-          {/* ANALYTICS GRID (FULL RESTORED) */}
+          {/* GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-            {/* ROLE */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Role Detection</h3>
               <div className="text-3xl font-bold text-cyan-300">
-                {result.role}
+                {result?.role || "-"}
               </div>
             </div>
 
-            {/* SENIORITY */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Seniority</h3>
               <div className="text-3xl font-bold text-purple-300">
-                {result.seniority}
+                {result?.seniority || "-"}
               </div>
             </div>
 
-            {/* EXPERIENCE */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Experience</h3>
               <div className="text-3xl font-bold text-green-300">
-                {result.experienceYears} Years
+                {result?.experienceYears ?? 0} Years
               </div>
             </div>
 
-            {/* JOB MATCH */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Job Match</h3>
               <div className="text-3xl font-bold text-yellow-300">
-                %{result.jobMatchScore || 0}
+                %{result?.jobMatchScore ?? 0}
               </div>
             </div>
 
-            {/* COMPANY COUNT */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Company Experience</h3>
               <div className="text-3xl font-bold text-pink-300">
-                {result.companyCount}
+                {result?.companyCount ?? 0}
               </div>
             </div>
 
-            {/* CERTIFICATES */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Certificates</h3>
 
               <div className="flex flex-wrap gap-3">
-                {result.certificates?.length ? (
+                {(result?.certificates || []).length ? (
                   result.certificates.map((c: string, i: number) => (
                     <span key={i} className="px-4 py-2 rounded-full bg-cyan-500/15 text-cyan-300">
                       {c}
@@ -227,12 +226,11 @@ export default function UploadBox() {
               </div>
             </div>
 
-            {/* SKILLS */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7 xl:col-span-2">
               <h3 className="text-2xl font-semibold mb-6">Skills Detected</h3>
 
               <div className="flex flex-wrap gap-3">
-                {result.skills?.map((s: string, i: number) => (
+                {(result?.skills || []).map((s: string, i: number) => (
                   <span key={i} className="px-4 py-2 rounded-full bg-green-500/15 text-green-300">
                     {s}
                   </span>
@@ -240,36 +238,33 @@ export default function UploadBox() {
               </div>
             </div>
 
-            {/* MISSING SKILLS */}
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-              <h3 className="text-2xl font-semibold mb-6">Missing Skills</h3>
+            {/*<div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
+               <h3 className="text-2xl font-semibold mb-6">Missing Skills</h3>
 
-              <div className="flex flex-wrap gap-3">
-                {result.missingSkills?.map((s: string, i: number) => (
+                <div className="flex flex-wrap gap-3">
+                {(result?.missingSkills || []).map((s: string, i: number) => (
                   <span key={i} className="px-4 py-2 rounded-full bg-red-500/15 text-red-300">
                     {s}
                   </span>
                 ))}
-              </div>
-            </div>
+              </div> 
+            </div>*/}
 
-            {/* STRENGTHS */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Strengths</h3>
 
               <ul className="space-y-3">
-                {result.strengths?.map((s: string, i: number) => (
+                {(result?.strengths || []).map((s: string, i: number) => (
                   <li key={i} className="text-green-300">✓ {s}</li>
                 ))}
               </ul>
             </div>
 
-            {/* WEAKNESSES */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Weaknesses</h3>
 
               <ul className="space-y-3">
-                {result.weaknesses?.map((s: string, i: number) => (
+                {(result?.weaknesses || []).map((s: string, i: number) => (
                   <li key={i} className="text-red-300">✗ {s}</li>
                 ))}
               </ul>
@@ -279,13 +274,10 @@ export default function UploadBox() {
         </div>
       )}
 
-      {/* Footer */}
       {/* FOOTER */}
       <div className="mt-16 border-t border-white/10 pt-10 pb-12">
-
         <div className="flex flex-col md:flex-row justify-between gap-10">
 
-          {/* LEFT */}
           <div>
             <h3 className="text-xl font-bold text-white">
               ATS Resume Analyzer
@@ -296,7 +288,6 @@ export default function UploadBox() {
               improve your resume, and increase interview chances.
             </p>
 
-            {/* CTA */}
             <button
               onClick={() => inputRef.current?.click()}
               className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-semibold hover:scale-105 transition"
@@ -305,48 +296,19 @@ export default function UploadBox() {
             </button>
           </div>
 
-          {/* RIGHT - SOCIALS */}
           <div className="grid grid-cols-2 gap-4 text-gray-300">
-
-            <a href="https://github.com/UfukDemrel" target="_blank" className="hover:text-white transition">
-              GitHub
-            </a>
-
-            <a href="https://www.linkedin.com/in/ufuk-demirel-1a6058389/" target="_blank" className="hover:text-white transition">
-              LinkedIn
-            </a>
-
-            <a href="https://x.com/demrelufuk" target="_blank" className="hover:text-white transition">
-              Twitter
-            </a>
-
-            <a href="https://www.instagram.com/demrelufuk" target="_blank" className="hover:text-white transition">
-              Instagram
-            </a>
-
-            <a href="https://www.youtube.com/@demrelufuk" target="_blank" className="hover:text-white transition">
-              YouTube
-            </a>
-
-            <a href="https://www.udemy.com/user/ufuk-demirel-6/" target="_blank" className="hover:text-white transition">
-              Udemy
-            </a>
-
-            <a href="#" className="hover:text-white transition">
-              Contact
-            </a>
-
+            <a href="https://github.com/UfukDemrel" className="hover:text-white">GitHub</a>
+            <a href="https://www.linkedin.com/in/ufuk-demirel-1a6058389/" className="hover:text-white">LinkedIn</a>
+            <a href="https://x.com/demrelufuk" className="hover:text-white">Twitter</a>
+            <a href="https://www.instagram.com/demrelufuk" className="hover:text-white">Instagram</a>
+            <a href="https://www.youtube.com/@demrelufuk" className="hover:text-white">YouTube</a>
+            <a href="https://www.udemy.com/user/ufuk-demirel-6/" className="hover:text-white">Udemy</a>
           </div>
         </div>
 
-        {/* BOTTOM BAR */}
-        <div className="mt-10 flex flex-col md:flex-row justify-between text-gray-500 text-sm gap-3">
-
-          <p>© {new Date().getFullYear()} ATS Analyzer. All rights reserved.</p>
-
-          <p className="text-cyan-400">
-            Built to help developers & job seekers pass ATS systems faster.
-          </p>
+        <div className="mt-10 flex justify-between text-gray-500 text-sm">
+          <p>© {new Date().getFullYear()} ATS Analyzer</p>
+          <p className="text-cyan-400">Built for developers & job seekers</p>
         </div>
       </div>
     </div>
