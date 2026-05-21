@@ -27,7 +27,7 @@ export function calculateSeniority(
   // title impact
   if (hasSenior) score += 3;
   if (hasMid) score += 2;
-  if (hasJunior) score -= 2;
+  if (hasJunior) score -= 1;
 
   // FINAL RULE (GÜNCELLENDİ)
   if (experienceYears >= 4 || score >= 6) return "Senior";

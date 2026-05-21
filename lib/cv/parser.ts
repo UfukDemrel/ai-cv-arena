@@ -1,10 +1,9 @@
-import { extractCompanies } from "./companyExtractor";
-
 /**
  * =========================
- * SKILLS
+ * CONSTANTS
  * =========================
  */
+
 const GLOBAL_SKILLS = [
   "react", "next.js", "vue", "nuxt", "angular", "svelte", "astro",
   "html", "css", "sass", "scss", "tailwind", "bootstrap",
@@ -20,21 +19,11 @@ const GLOBAL_SKILLS = [
   "git", "github", "figma", "seo", "shopify"
 ];
 
-/**
- * =========================
- * EXPERIENCE KEYWORDS
- * =========================
- */
 const EXPERIENCE_KEYWORDS = [
   "developer", "engineer", "specialist", "manager",
-  "intern", "frontend", "backend", "software"
+  "intern", "frontend", "backend", "software", "qa"
 ];
 
-/**
- * =========================
- * CERT KEYWORDS
- * =========================
- */
 const CERT_KEYWORDS = [
   "certification", "certificate", "certified",
   "course", "training", "bootcamp",
@@ -43,46 +32,115 @@ const CERT_KEYWORDS = [
 
 /**
  * =========================
- * NORMALIZE
+ * CAREER INSIGHTS (NEW)
  * =========================
  */
-function normalize(text: string) {
-  return text
-    .replace(/\u0000/g, "")
-    .replace(/\r/g, "\n")
-    .replace(/\s+/g, " ")
-    .trim();
+
+function getCareerInsights(text: string) {
+  const lower = text.toLowerCase();
+
+  /**
+   * ROLE DETECTION (daha güçlü)
+   */
+  const roleMap = [
+    { key: "qa", value: "QA Engineer" },
+    { key: "frontend", value: "Frontend Developer" },
+    { key: "backend", value: "Backend Developer" },
+    { key: "full stack", value: "Full Stack Developer" },
+    { key: "software engineer", value: "Software Engineer" },
+    { key: "developer", value: "Developer" }
+  ];
+
+  let topRole = "Unknown";
+
+  for (const r of roleMap) {
+    if (lower.includes(r.key)) {
+      topRole = r.value;
+      break;
+    }
+  }
+
+  /**
+   * EXPERIENCE LEVEL (gerçek sinyal)
+   * - "present", "junior", "senior" kelimeleri önemli
+   */
+  let level = "Junior";
+
+  if (lower.includes("senior") || lower.includes("sr")) {
+    level = "Senior";
+  } else if (lower.includes("mid") || lower.includes("intermediate")) {
+    level = "Mid";
+  } else if (lower.includes("junior") || lower.includes("intern")) {
+    level = "Junior";
+  }
+
+  /**
+   * fallback: experience pattern varsa güçlendir
+   */
+  const experienceBlocks =
+    text.match(/20\d{2}\s*[-–]\s*(20\d{2}|present|current)/gi) || [];
+
+  if (experienceBlocks.length >= 3 && level === "Mid-Level") {
+    level = "Mid";
+  }
+
+  if (experienceBlocks.length >= 5) {
+    level = "Senior";
+  }
+
+  /**
+   * DOMAIN DETECTION (daha net)
+   */
+  let domain = "General Development";
+
+  if (lower.includes("qa")) domain = "Quality Assurance";
+  else if (lower.includes("react") || lower.includes("frontend"))
+    domain = "Frontend Development";
+  else if (lower.includes("node") || lower.includes("backend"))
+    domain = "Backend Development";
+  else if (lower.includes("aws") || lower.includes("docker"))
+    domain = "DevOps / Cloud";
+
+  return {
+    topRole,
+    level,
+    domain
+  };
 }
 
 /**
  * =========================
- * SMART SPLIT
+ * HELPERS
  * =========================
  */
-function smartSplit(text: string) {
+
+function normalize(text: string) {
   return text
-    .split(/\n|•|–|-|\||,/g)
-    .map(t => t.trim())
+    .replace(/\u0000/g, "")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+function splitLines(text: string) {
+  return text
+    .split("\n")
+    .map(l => l.trim())
     .filter(Boolean);
 }
 
 /**
  * =========================
- * EXPERIENCE ENGINE (FIXED)
+ * EXPERIENCE ENGINE
  * =========================
  */
+
 function extractExperienceYears(text: string) {
   const lower = text.toLowerCase();
-
   let total = 0;
 
-  /**
-   * 1. SADECE WORK EXPERIENCE RANGE'LERİ
-   * 2020 - 2023 / 2020–Present gibi
-   */
-  const ranges = text.match(
-    /(20\d{2})\s*[-–]\s*(20\d{2}|present|current)/gi
-  );
+  const ranges = text.match(/(20\d{2})\s*[-–]\s*(20\d{2}|present|current)/gi);
 
   if (ranges) {
     for (const r of ranges) {
@@ -92,31 +150,21 @@ function extractExperienceYears(text: string) {
         const start = Number(years[0]);
         const end = Number(years[1]);
 
-        if (end > start && end - start <= 20) {
+        if (end > start && end - start <= 50) {
           total += end - start;
         }
       } else if (r.toLowerCase().includes("present")) {
         const start = Number(years?.[0]);
         if (start) {
-          const now = new Date().getFullYear();
-          total += now - start;
+          total += new Date().getFullYear() - start;
         }
       }
     }
   }
 
-  /**
-   * 2. JOB TITLE HEURISTIC (backup)
-   */
-  const jobHits = [
-    "developer",
-    "engineer",
-    "specialist",
-    "intern",
-    "manager",
-    "frontend",
-    "backend"
-  ].filter(k => lower.includes(k)).length;
+  const jobHits = EXPERIENCE_KEYWORDS.filter(k =>
+    lower.includes(k)
+  ).length;
 
   let estimated = 0;
 
@@ -125,23 +173,15 @@ function extractExperienceYears(text: string) {
   else if (jobHits >= 2) estimated = 2;
   else if (jobHits >= 1) estimated = 1;
 
-  /**
-   * 3. FINAL FIX (IMPORTANT)
-   * - MAX değil SUM değil → "en mantıklı" olanı al
-   */
-  const final = Math.max(total, estimated);
-
-  /**
-   * 4. SAFETY LIMIT
-   */
-  return Math.min(final, 40);
+  return Math.min(Math.max(total, estimated), 40);
 }
 
 /**
  * =========================
- * CERT EXTRACTION (CLEAN)
+ * CERTIFICATES
  * =========================
  */
+
 function extractCertificates(text: string, lines: string[]) {
   const certs: string[] = [];
   const lower = text.toLowerCase();
@@ -167,7 +207,6 @@ function extractCertificates(text: string, lines: string[]) {
     }
   }
 
-  // fallback
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
 
@@ -188,15 +227,11 @@ function extractCertificates(text: string, lines: string[]) {
  * MAIN PARSER
  * =========================
  */
+
 export function parseCV(rawText: string) {
   const text = normalize(rawText);
   const clean = text.toLowerCase();
-  const lines = smartSplit(text);
-
-  /**
-   * COMPANIES
-   */
-  const companies = extractCompanies(rawText);
+  const lines = splitLines(text);
 
   /**
    * SKILLS
@@ -217,11 +252,15 @@ export function parseCV(rawText: string) {
    */
   const certificates = extractCertificates(text, lines);
 
+  /**
+   * CAREER INSIGHTS (NEW UI FRIENDLY DATA)
+   */
+  const careerInsights = getCareerInsights(text);
+
   return {
     skills,
     certificates,
     experienceYears,
-    companies,
-    companyCount: companies.length
+    careerInsights
   };
 }

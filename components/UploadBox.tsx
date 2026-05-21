@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export default function UploadBox() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -12,9 +12,33 @@ export default function UploadBox() {
   const [error, setError] = useState("");
   const [text, setText] = useState("");
 
+  /* =========================
+     ANIMATED SCORE STATE
+  ========================= */
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    const target = result?.score ?? 0;
+
+    let start = 0;
+    setAnimatedScore(0);
+
+    const interval = setInterval(() => {
+      start += 1;
+
+      if (start >= target) {
+        start = target;
+        clearInterval(interval);
+      }
+
+      setAnimatedScore(start);
+    }, 15);
+
+    return () => clearInterval(interval);
+  }, [result]);
+
   /**
-   * SAFE PDF PARSER (FIXED)
-   * prevents DOMMatrix / SSR crashes
+   * SAFE PDF PARSER
    */
   const extractPdfText = async (file: File) => {
     const mod = await import("react-pdftotext");
@@ -55,7 +79,6 @@ export default function UploadBox() {
       }
 
       setResult(data?.result || null);
-
     } catch (err: any) {
       setError(err?.message || "Unexpected error");
     } finally {
@@ -67,28 +90,34 @@ export default function UploadBox() {
     if (score < 50) {
       return {
         text: "text-red-400",
-        border: "border-red-500",
-        shadow: "shadow-[0_0_80px_rgba(239,68,68,0.25)]",
+        color: "#ef4444",
       };
     }
 
     if (score < 75) {
       return {
         text: "text-yellow-300",
-        border: "border-yellow-400",
-        shadow: "shadow-[0_0_80px_rgba(250,204,21,0.25)]",
+        color: "#facc15",
       };
     }
 
     return {
       text: "text-green-400",
-      border: "border-green-500",
-      shadow: "shadow-[0_0_80px_rgba(34,197,94,0.25)]",
+      color: "#22c55e",
     };
   };
 
   const scoreValue = result?.score ?? 0;
   const style = getScoreStyle(scoreValue);
+
+  /* =========================
+     CIRCLE CONFIG (FIXED)
+  ========================= */
+  const radius = 85;
+  const stroke = 12;
+  const circumference = 2 * Math.PI * radius;
+
+  const progress = (animatedScore / 100) * circumference;
 
   return (
     <div className="w-full max-w-5xl mx-auto">
@@ -135,7 +164,7 @@ export default function UploadBox() {
         <textarea
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
-          className="w-full h-48 bg-black/30 border border-white/10 rounded-3xl p-5 text-white outline-none resize-none focus:border-cyan-500/40"
+          className="w-full h-48 bg-black/30 border border-white/10 rounded-3xl p-5 text-white outline-none resize-none"
         />
       </div>
 
@@ -150,15 +179,45 @@ export default function UploadBox() {
       {result && (
         <div className="mt-10 space-y-8">
 
-          {/* SCORE */}
+          {/* SCORE CARD */}
           <div className="relative overflow-hidden rounded-[36px] border border-white/10 bg-white/5 backdrop-blur-xl p-12">
 
-            <div className="relative z-10 flex flex-col items-center">
+            <div className="flex flex-col items-center">
 
-              <div className={`w-52 h-52 rounded-full border-[12px] flex items-center justify-center bg-black/20 ${style.border} ${style.shadow}`}>
+              {/* CIRCLE SCORE */}
+              <div className="relative w-52 h-52 flex items-center justify-center">
+
+                <svg className="absolute w-full h-full -rotate-90">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r={radius}
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth={stroke}
+                    fill="none"
+                  />
+
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r={radius}
+                    stroke={style.color}
+                    strokeWidth={stroke}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={circumference - progress}
+                    style={{
+                      transition: "stroke-dashoffset 0.25s ease",
+                      filter: `drop-shadow(0 0 8px ${style.color})`,
+                    }}
+                  />
+                </svg>
+
+                {/* TEXT */}
                 <div className="text-center">
                   <div className={`text-6xl font-black ${style.text}`}>
-                    {scoreValue}
+                    {animatedScore}
                   </div>
                   <div className="text-sm tracking-widest text-gray-400 mt-2">
                     ATS SCORE
@@ -204,9 +263,29 @@ export default function UploadBox() {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-              <h3 className="text-2xl font-semibold mb-6">Company Experience</h3>
-              <div className="text-3xl font-bold text-pink-300">
-                {result?.companyCount ?? 0}
+              <h3 className="text-2xl font-semibold mb-6">Career Insights</h3>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-gray-400 text-sm">Top Role</p>
+                  <p className="text-xl font-bold text-cyan-300">
+                    {result?.careerInsights?.topRole || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-gray-400 text-sm">Level</p>
+                  <p className="text-xl font-bold text-purple-300">
+                    {result?.careerInsights?.level || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-gray-400 text-sm">Domain</p>
+                  <p className="text-xl font-bold text-green-300">
+                    {result?.careerInsights?.domain || "-"}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -238,18 +317,6 @@ export default function UploadBox() {
               </div>
             </div>
 
-            {/*<div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-               <h3 className="text-2xl font-semibold mb-6">Missing Skills</h3>
-
-                <div className="flex flex-wrap gap-3">
-                {(result?.missingSkills || []).map((s: string, i: number) => (
-                  <span key={i} className="px-4 py-2 rounded-full bg-red-500/15 text-red-300">
-                    {s}
-                  </span>
-                ))}
-              </div> 
-            </div>*/}
-
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Strengths</h3>
 
@@ -263,11 +330,17 @@ export default function UploadBox() {
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Weaknesses</h3>
 
-              <ul className="space-y-3">
-                {(result?.weaknesses || []).map((s: string, i: number) => (
-                  <li key={i} className="text-red-300">✗ {s}</li>
-                ))}
-              </ul>
+              {(result?.weaknesses && result.weaknesses.length > 0) ? (
+                <ul className="space-y-3">
+                  {result.weaknesses.map((s: string, i: number) => (
+                    <li key={i} className="text-red-300">✗ {s}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-green-300">
+                  Great! Your CV looks strong.
+                </p>
+              )}
             </div>
 
           </div>
