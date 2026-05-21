@@ -297,12 +297,12 @@ export default function UploadBox() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-gray-300">
-            <a href="https://github.com/UfukDemrel" className="hover:text-white">GitHub</a>
-            <a href="https://www.linkedin.com/in/ufuk-demirel-1a6058389/" className="hover:text-white">LinkedIn</a>
-            <a href="https://x.com/demrelufuk" className="hover:text-white">Twitter</a>
-            <a href="https://www.instagram.com/demrelufuk" className="hover:text-white">Instagram</a>
-            <a href="https://www.youtube.com/@demrelufuk" className="hover:text-white">YouTube</a>
-            <a href="https://www.udemy.com/user/ufuk-demirel-6/" className="hover:text-white">Udemy</a>
+            <a target="_blank" href="https://github.com/UfukDemrel" className="hover:text-white">GitHub</a>
+            <a target="_blank" href="https://www.linkedin.com/in/ufuk-demirel-1a6058389/" className="hover:text-white">LinkedIn</a>
+            <a target="_blank" href="https://x.com/demrelufuk" className="hover:text-white">Twitter</a>
+            <a target="_blank" href="https://www.instagram.com/demrelufuk" className="hover:text-white">Instagram</a>
+            <a target="_blank" href="https://www.youtube.com/@demrelufuk" className="hover:text-white">YouTube</a>
+            <a target="_blank" href="https://www.udemy.com/user/ufuk-demirel-6/" className="hover:text-white">Udemy</a>
           </div>
         </div>
 
