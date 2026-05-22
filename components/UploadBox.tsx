@@ -244,7 +244,7 @@ export default function UploadBox() {
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
               <h3 className="text-2xl font-semibold mb-6">Seniority</h3>
               <div className="text-3xl font-bold text-purple-300">
-                {result?.seniority || "-"}
+                {result?.careerInsights?.level || "-"}
               </div>
             </div>
 
@@ -290,17 +290,24 @@ export default function UploadBox() {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-              <h3 className="text-2xl font-semibold mb-6">Certificates</h3>
+              <h3 className="text-2xl font-semibold mb-6">
+                Certificates
+              </h3>
 
               <div className="flex flex-wrap gap-3">
-                {(result?.certificates || []).length ? (
+                {(result?.certificates || []).length > 0 ? (
                   result.certificates.map((c: string, i: number) => (
-                    <span key={i} className="px-4 py-2 rounded-full bg-cyan-500/15 text-cyan-300">
+                    <span
+                      key={i}
+                      className="px-4 py-2 rounded-full bg-cyan-500/15 text-cyan-300"
+                    >
                       {c}
                     </span>
                   ))
                 ) : (
-                  <p className="text-gray-400">No certificates detected</p>
+                  <p className="text-gray-400">
+                    No certificates found
+                  </p>
                 )}
               </div>
             </div>
