@@ -127,6 +127,17 @@ export default function UploadBox() {
   const progress =
     (animatedScore / 100) * circumference;
 
+  const formatFileName = (name: string) => {
+    if (name.length <= 10) return name;
+
+    const extIndex = name.lastIndexOf(".");
+    const ext = extIndex !== -1 ? name.slice(extIndex) : "";
+
+    const base = extIndex !== -1 ? name.slice(0, extIndex) : name;
+
+    return base.slice(0, 10) + "..." + ext;
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto">
 
@@ -160,8 +171,8 @@ export default function UploadBox() {
         </p>
 
         {fileName && (
-          <div className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-green-300">
-            ✓ {fileName}
+          <div className="mt-6 flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-green-300">
+            ✓ {formatFileName(fileName)}
           </div>
         )}
 
@@ -384,7 +395,7 @@ export default function UploadBox() {
               <div className="flex flex-wrap gap-3">
 
                 {Array.isArray(result?.certificates) &&
-                result.certificates.length > 0 ? (
+                  result.certificates.length > 0 ? (
 
                   result.certificates.map(
                     (c: string, i: number) => (
@@ -439,7 +450,7 @@ export default function UploadBox() {
               <div className="flex flex-wrap gap-3">
 
                 {Array.isArray(result?.matchedSkills) &&
-                result.matchedSkills.length > 0 ? (
+                  result.matchedSkills.length > 0 ? (
 
                   result.matchedSkills.map(
                     (s: string, i: number) => (
@@ -471,7 +482,7 @@ export default function UploadBox() {
               <div className="flex flex-wrap gap-3">
 
                 {Array.isArray(result?.missingSkills) &&
-                result.missingSkills.length > 0 ? (
+                  result.missingSkills.length > 0 ? (
 
                   result.missingSkills.map(
                     (s: string, i: number) => (
@@ -550,7 +561,7 @@ export default function UploadBox() {
               </h3>
 
               {Array.isArray(result?.weaknesses) &&
-              result.weaknesses.length > 0 ? (
+                result.weaknesses.length > 0 ? (
 
                 <ul className="space-y-3">
 
