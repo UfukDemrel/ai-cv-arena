@@ -2,89 +2,168 @@ export function detectRole(text: string, skills: string[]) {
   const clean = text.toLowerCase();
   const skillSet = skills.map(s => s.toLowerCase());
 
-  const score = (keywords: string[]) => {
-    return keywords.reduce((acc, k) => {
-      if (clean.includes(k) || skillSet.includes(k)) return acc + 1;
+  const countMatches = (keywords: string[]) => {
+    return keywords.reduce((acc, keyword) => {
+      if (
+        clean.includes(keyword.toLowerCase()) ||
+        skillSet.includes(keyword.toLowerCase())
+      ) {
+        return acc + 1;
+      }
+
       return acc;
     }, 0);
   };
 
   /**
    * =========================
-   * ROLE SCORES (FIXED PRIORITY)
+   * ROLE DEFINITIONS
    * =========================
    */
-  const roles = [
-    {
-      name: "QA Engineer",
-      keywords: [
-        "API","api","python","postman","bug","test case","quality assurance","qa",
-        "testing","test","automation","selenium","cypress"
-      ],
-    },
-    {
-      name: "Backend Developer",
-      keywords: [
-        "node","express","api","database","sql","backend","rest","graphql"
-      ],
-    },
+
+  const roleMap = [
     {
       name: "Frontend Developer",
       keywords: [
-        "react","next","frontend","ui","css","html","javascript"
-      ],
+        "react",
+        "next",
+        "next.js",
+        "frontend",
+        "ui",
+        "css",
+        "html",
+        "javascript",
+        "typescript",
+        "tailwind",
+        "redux"
+      ]
     },
+
+    {
+      name: "Backend Developer",
+      keywords: [
+        "node",
+        "express",
+        "nestjs",
+        "backend",
+        "api",
+        "rest",
+        "graphql",
+        "sql",
+        "postgresql",
+        "mongodb",
+        "database"
+      ]
+    },
+
     {
       name: "Full Stack Developer",
       keywords: [
-        "react","node","frontend","backend"
-      ],
+        "react",
+        "next",
+        "node",
+        "express",
+        "mongodb",
+        "postgresql",
+        "frontend",
+        "backend"
+      ]
     },
+
+    {
+      name: "QA Engineer",
+      keywords: [
+        "qa",
+        "testing",
+        "automation",
+        "selenium",
+        "cypress",
+        "postman",
+        "test case",
+        "quality assurance",
+        "playwright",
+        "jest"
+      ]
+    },
+
     {
       name: "DevOps Engineer",
       keywords: [
-        "docker","kubernetes","aws","ci","cd","devops","pipeline"
-      ],
+        "docker",
+        "kubernetes",
+        "aws",
+        "azure",
+        "gcp",
+        "devops",
+        "pipeline",
+        "ci/cd",
+        "jenkins"
+      ]
     },
+
     {
       name: "Data Analyst",
       keywords: [
-        "excel","sql","data","analysis","powerbi","tableau"
-      ],
-    },
+        "excel",
+        "power bi",
+        "tableau",
+        "analysis",
+        "analytics",
+        "sql",
+        "data visualization"
+      ]
+    }
   ];
 
-  let bestRole = "General Software Professional";
-  let bestScore = 0;
+  /**
+   * =========================
+   * CALCULATE SCORES
+   * =========================
+   */
 
-  for (const role of roles) {
-    const s = score(role.keywords);
+  const scores = roleMap.map(role => ({
+    name: role.name,
+    score: countMatches(role.keywords)
+  }));
 
-    if (s > bestScore) {
-      bestScore = s;
-      bestRole = role.name;
-    }
+  /**
+   * =========================
+   * FULL STACK BOOST
+   * =========================
+   */
+
+  const hasFrontend =
+    clean.includes("react") ||
+    clean.includes("next") ||
+    clean.includes("frontend");
+
+  const hasBackend =
+    clean.includes("node") ||
+    clean.includes("express") ||
+    clean.includes("backend") ||
+    clean.includes("api");
+
+  if (hasFrontend && hasBackend) {
+    return "Full Stack Developer";
   }
 
   /**
-   * CRITICAL FIX:
-   * QA vs Backend conflict çözümü
+   * =========================
+   * SORT BY SCORE
+   * =========================
    */
-  const hasQASignals =
-    clean.includes("test") ||
-    clean.includes("testing") ||
-    clean.includes("qa") ||
-    clean.includes("automation");
 
-  const hasBackendSignals =
-    clean.includes("api") ||
-    clean.includes("database") ||
-    clean.includes("sql") ||
-    clean.includes("backend");
+  scores.sort((a, b) => b.score - a.score);
 
-  if (hasQASignals && bestRole === "Backend Developer") {
-    return "QA Engineer";
+  /**
+   * =========================
+   * FALLBACK
+   * =========================
+   */
+
+  if (scores[0].score <= 0) {
+    return "General Software Professional";
   }
 
-  return bestRole;
+  return scores[0].name;
 }

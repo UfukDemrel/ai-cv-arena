@@ -7,8 +7,11 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+
     /**
+     * =========================
      * BODY
+     * =========================
      */
     const body = await req.json();
 
@@ -39,6 +42,7 @@ export async function POST(req: NextRequest) {
      */
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
+
       messages: [
         {
           role: "system",
@@ -71,6 +75,7 @@ Extract:
 `
         }
       ],
+
       temperature: 0.2,
     });
 
@@ -86,10 +91,115 @@ Extract:
 
     /**
      * =========================
+     * AI IMPROVEMENTS
+     * =========================
+     */
+    const improvementsResponse =
+      await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+
+        messages: [
+          {
+            role: "system",
+            content: `
+You are an ATS resume improvement expert.
+
+Return ONLY valid JSON.
+
+Example:
+{
+  "suggestions": [
+    "Add measurable achievements.",
+    "Include more ATS keywords."
+  ]
+}
+`
+          },
+          {
+            role: "user",
+            content: `
+Analyze this resume and provide ATS improvement suggestions.
+
+Resume:
+
+${rawText}
+`
+          }
+        ],
+
+        temperature: 0.3,
+      });
+
+    let improvementData: any = {};
+
+    try {
+      improvementData = JSON.parse(
+        improvementsResponse.choices[0].message.content || "{}"
+      );
+    } catch {
+      improvementData = {};
+    }
+
+    /**
+     * =========================
+     * AI SUMMARY
+     * =========================
+     */
+    const summaryResponse =
+      await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+
+        messages: [
+          {
+            role: "system",
+            content: `
+You are a professional ATS resume analyzer.
+
+Write a short professional summary for this CV.
+
+Rules:
+- max 3 sentences
+- professional tone
+- mention strongest technologies
+- mention experience level
+- mention strongest side of the candidate
+`
+          },
+          {
+            role: "user",
+            content: rawText
+          }
+        ],
+
+        temperature: 0.4,
+      });
+
+    const aiSummary =
+      summaryResponse.choices[0].message.content || "";
+
+    /**
+     * =========================
      * ANALYSIS
      * =========================
      */
     const analysis = analyzeCV(parsed, job);
+
+    /**
+     * =========================
+     * SAFE FALLBACKS
+     * =========================
+     */
+    const safeCertificates =
+      Array.isArray(aiData?.certificates) &&
+      aiData.certificates.length > 0
+        ? aiData.certificates
+        : parsed?.certificates || [];
+
+    const safeSuggestions =
+      Array.isArray(improvementData?.suggestions) &&
+      improvementData.suggestions.length > 0
+        ? improvementData.suggestions
+        : analysis?.suggestions || [];
 
     /**
      * =========================
@@ -98,11 +208,16 @@ Extract:
      */
     return NextResponse.json({
       success: true,
+
       result: {
         ...parsed,
         ...analysis,
 
-        certificates: aiData?.certificates || [],
+        summary: aiSummary,
+
+        certificates: safeCertificates,
+
+        suggestions: safeSuggestions,
 
         role:
           aiData?.role ||
@@ -113,10 +228,23 @@ Extract:
           aiData?.seniority ||
           analysis?.seniority ||
           "Junior",
+
+        ai: {
+          certificates: safeCertificates,
+
+          role:
+            aiData?.role || "",
+
+          seniority:
+            aiData?.seniority || "",
+
+          suggestions: safeSuggestions
+        }
       },
     });
 
   } catch (err: any) {
+
     console.error("CV ANALYSIS ERROR:", err);
 
     return NextResponse.json(
