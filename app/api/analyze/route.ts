@@ -191,13 +191,13 @@ Rules:
      */
     const safeCertificates =
       Array.isArray(aiData?.certificates) &&
-      aiData.certificates.length > 0
+        aiData.certificates.length > 0
         ? aiData.certificates
         : parsed?.certificates || [];
 
     const safeSuggestions =
       Array.isArray(improvementData?.suggestions) &&
-      improvementData.suggestions.length > 0
+        improvementData.suggestions.length > 0
         ? improvementData.suggestions
         : analysis?.suggestions || [];
 
