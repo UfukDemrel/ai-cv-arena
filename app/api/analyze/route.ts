@@ -185,6 +185,22 @@ Rules:
     const analysis = analyzeCV(parsed, job);
 
     /**
+ * FIX WEAKNESSES
+ */
+    const fixedWeaknesses = (analysis?.weaknesses || []).filter(
+      (w: string) => {
+        if (
+          aiData?.certificates?.length > 0 &&
+          w === "No certifications found"
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
+    /**
      * =========================
      * SAFE FALLBACKS
      * =========================
@@ -212,32 +228,24 @@ Rules:
       result: {
         ...parsed,
         ...analysis,
-
         summary: aiSummary,
-
+        weaknesses: fixedWeaknesses,
         certificates: safeCertificates,
-
         suggestions: safeSuggestions,
-
         role:
           aiData?.role ||
           analysis?.role ||
           "Unknown",
-
         seniority:
           aiData?.seniority ||
           analysis?.seniority ||
           "Junior",
-
         ai: {
           certificates: safeCertificates,
-
           role:
             aiData?.role || "",
-
           seniority:
             aiData?.seniority || "",
-
           suggestions: safeSuggestions
         }
       },

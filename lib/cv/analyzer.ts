@@ -194,10 +194,8 @@ export function analyzeCV(data: any, job: string) {
     seniority,
     score,
     jobMatchScore,
-
     matchedSkills,
     missingSkills,
-
     strengths,
     weaknesses,
     suggestions,
