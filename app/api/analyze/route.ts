@@ -142,6 +142,73 @@ ${rawText}
 
     /**
      * =========================
+     * AI SALARY ESTIMATION
+     * =========================
+     */
+    const salaryResponse =
+      await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+
+        messages: [
+          {
+            role: "system",
+            content: `
+You are a salary estimation AI for the Turkish software market in 2026.
+
+IMPORTANT:
+Use REALISTIC Turkish software salary ranges.
+
+Current estimated monthly salary expectations in Turkey:
+
+- Junior Frontend Developer: 35k - 55k TRY
+- Mid Frontend Developer: 60k - 100k TRY
+- Senior Frontend Developer: 100k - 180k TRY
+
+- Junior QA Engineer: 35k - 50k TRY
+- Mid QA Engineer: 55k - 90k TRY
+- Senior QA Engineer: 90k - 160k TRY
+
+- Full Stack Developer: 70k - 150k TRY
+- DevOps Engineer: 90k - 180k TRY
+- Backend Developer: 65k - 140k TRY
+
+Rules:
+- Technologies like React, Next.js, AWS, Docker, Kubernetes, TypeScript increase salary.
+- English level and certifications increase salary.
+- Strong portfolios increase salary.
+- Never return unrealistically low salaries for experienced developers.
+
+Return ONLY valid JSON.
+
+Example:
+{
+  "minSalary": 70000,
+  "maxSalary": 110000,
+  "avgSalary": 85000,
+  "currency": "TRY",
+  "marketLevel": "High"
+}
+
+${rawText}
+`
+          }
+        ],
+
+        temperature: 0.4,
+      });
+
+    let salaryData: any = {};
+
+    try {
+      salaryData = JSON.parse(
+        salaryResponse.choices[0].message.content || "{}"
+      );
+    } catch {
+      salaryData = {};
+    }
+
+    /**
+     * =========================
      * AI SUMMARY
      * =========================
      */
@@ -185,20 +252,24 @@ Rules:
     const analysis = analyzeCV(parsed, job);
 
     /**
- * FIX WEAKNESSES
- */
-    const fixedWeaknesses = (analysis?.weaknesses || []).filter(
-      (w: string) => {
-        if (
-          aiData?.certificates?.length > 0 &&
-          w === "No certifications found"
-        ) {
-          return false;
-        }
+     * =========================
+     * FIX WEAKNESSES
+     * =========================
+     */
+    const fixedWeaknesses =
+      (analysis?.weaknesses || []).filter(
+        (w: string) => {
 
-        return true;
-      }
-    );
+          if (
+            aiData?.certificates?.length > 0 &&
+            w === "No certifications found"
+          ) {
+            return false;
+          }
+
+          return true;
+        }
+      );
 
     /**
      * =========================
@@ -228,25 +299,54 @@ Rules:
       result: {
         ...parsed,
         ...analysis,
+
         summary: aiSummary,
+
         weaknesses: fixedWeaknesses,
+
         certificates: safeCertificates,
+
         suggestions: safeSuggestions,
+
         role:
           aiData?.role ||
           analysis?.role ||
           "Unknown",
+
         seniority:
           aiData?.seniority ||
           analysis?.seniority ||
           "Junior",
+
+        salary: {
+          min:
+            salaryData?.minSalary || 0,
+
+          max:
+            salaryData?.maxSalary || 0,
+
+          avg:
+            salaryData?.avgSalary || 0,
+
+          currency:
+            salaryData?.currency || "TRY",
+
+          marketLevel:
+            salaryData?.marketLevel || "Medium"
+        },
+
         ai: {
           certificates: safeCertificates,
+
           role:
             aiData?.role || "",
+
           seniority:
             aiData?.seniority || "",
-          suggestions: safeSuggestions
+
+          suggestions: safeSuggestions,
+
+          salary: salaryData || {}
         }
       },
     });

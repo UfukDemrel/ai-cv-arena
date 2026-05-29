@@ -330,19 +330,6 @@ export default function UploadBox() {
 
             </div>
 
-            {/* JOB MATCH */}
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-
-              <h3 className="text-2xl font-semibold mb-6">
-                Job Match
-              </h3>
-
-              <div className="text-3xl font-bold text-yellow-300">
-                %{result?.jobMatchScore ?? 0}
-              </div>
-
-            </div>
-
             {/* CAREER INSIGHTS */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
 
@@ -417,6 +404,42 @@ export default function UploadBox() {
               </div>
             </div>
 
+            {/* AI SALARY ESTİMATE */}
+            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
+              <h3 className="text-2xl font-semibold mb-6">
+                AI Salary Estimate
+              </h3>
+
+              <div className="space-y-4">
+
+                <div>
+                  <p className="text-gray-400 text-sm">
+                    Estimated Monthly Salary
+                  </p>
+
+                  <p className="text-4xl font-black text-green-300">
+                    ₺
+                    {result?.salary?.avg?.toLocaleString?.() || 0}
+                  </p>
+                </div>
+
+                <div className="text-gray-400">
+                  Range:
+                  {" "}
+                  ₺{result?.salary?.min?.toLocaleString?.()}
+                  {" - "}
+                  ₺{result?.salary?.max?.toLocaleString?.()}
+                </div>
+
+                <div className="inline-flex px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                  Market Demand:
+                  {" "}
+                  {result?.salary?.marketLevel || "Medium"}
+                </div>
+
+              </div>
+            </div>
+
             {/* SKILLS */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7 xl:col-span-2">
 
@@ -438,6 +461,19 @@ export default function UploadBox() {
                 )}
 
               </div>
+            </div>
+
+            {/* JOB MATCH */}
+            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
+
+              <h3 className="text-2xl font-semibold mb-6">
+                Job Match
+              </h3>
+
+              <div className="text-3xl font-bold text-yellow-300">
+                %{result?.jobMatchScore ?? 0}
+              </div>
+
             </div>
 
             {/* MATCHED SKILLS */}
@@ -504,6 +540,38 @@ export default function UploadBox() {
               </div>
             </div>
 
+            {/* WEAKNESSES */}
+            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
+              <h3 className="text-2xl font-semibold mb-6">
+                Weaknesses
+              </h3>
+
+              {Array.isArray(result?.weaknesses) &&
+                result.weaknesses.length > 0 ? (
+
+                <ul className="space-y-3">
+
+                  {result.weaknesses.map(
+                    (s: string, i: number) => (
+                      <li
+                        key={i}
+                        className="text-red-300"
+                      >
+                        ✗ {s}
+                      </li>
+                    )
+                  )}
+
+                </ul>
+
+              ) : (
+                <p className="text-green-300">
+                  Great! Your CV looks strong.
+                </p>
+              )}
+
+            </div>
+
             {/* AI SUGGESTIONS */}
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-7 xl:col-span-2">
 
@@ -551,39 +619,6 @@ export default function UploadBox() {
                 )}
 
               </ul>
-            </div>
-
-            {/* WEAKNESSES */}
-            <div className="bg-white/5 border border-white/10 rounded-[32px] p-7">
-
-              <h3 className="text-2xl font-semibold mb-6">
-                Weaknesses
-              </h3>
-
-              {Array.isArray(result?.weaknesses) &&
-                result.weaknesses.length > 0 ? (
-
-                <ul className="space-y-3">
-
-                  {result.weaknesses.map(
-                    (s: string, i: number) => (
-                      <li
-                        key={i}
-                        className="text-red-300"
-                      >
-                        ✗ {s}
-                      </li>
-                    )
-                  )}
-
-                </ul>
-
-              ) : (
-                <p className="text-green-300">
-                  Great! Your CV looks strong.
-                </p>
-              )}
-
             </div>
 
           </div>
